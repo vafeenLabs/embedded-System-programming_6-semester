@@ -62,9 +62,9 @@ void setup_ports() {
 }
 
 void setup_interrupts() {
-    PCMSK0 |= (1 << PCINT0); // allow interrupts for PB3
+    PCMSK0 |= (1 << PCINT0); // allow interrupts for PA0
     GIMSK |= (1 << PCIE0);
-    PCMSK1 |= (1 << PCINT11); //allow interrupts for PA0
+    PCMSK1 |= (1 << PCINT11); //allow interrupts for PB3
     GIMSK |= (1 << PCIE1);
     sei(); // allow interruprs globally
 }
