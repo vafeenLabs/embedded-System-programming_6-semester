@@ -1,3 +1,3 @@
 SimulIDE_1.1.0-SR1_Win64
-*/main.bin
-*/main.hex
+*/*.bin
+*/*.hex
