@@ -7,7 +7,7 @@ int curSpeed = 10;
 
 uint8_t dir = 0;
 uint8_t motor_on = 0;
-
+// установка режима работы приема-передатчика, чтобы принимать команды с терминала и подавать скорость на 2ю плату 
 void USART_init(unsigned int ubrr) {
     UBRRH = (unsigned char)(ubrr >> 8);
     UBRRL = (unsigned char)ubrr;
@@ -15,18 +15,21 @@ void USART_init(unsigned int ubrr) {
     UCSRC = (1 << URSEL) | (1 << UCSZ1) | (1 << UCSZ0);
 }
 
+// передача скорости 
 void USART_transmit(uint16_t data) {
     while (!(UCSRA & (1 << UDRE)));
 
     UDR = data;
 }
 
+// получение команды 
 unsigned char USART_receive(void) {
     while (!(UCSRA & (1 << RXC)));
 
     return UDR;
 }
 
+// обработка команд в терминале 
 void check_input_data(unsigned char input) {
     if (input == '1') {
         motor_on = 1;
@@ -88,6 +91,7 @@ void setup() {
     PORT_B_MINUS &= ~(1 << B_MINUS);
 }
 
+// сделать шаг двигателя 
 void make_step(uint8_t index) {
     PORT_A_PLUS &= ~(1 << A_PLUS);
     PORT_B_PLUS &= ~(1 << B_PLUS);
@@ -110,7 +114,7 @@ void delay_variable_ms(uint16_t ms) {
 
 int main(void) {
     setup();
-    USART_init(103);
+    USART_init(103); // 103 константа 
 
     uint8_t step = 0;
 
