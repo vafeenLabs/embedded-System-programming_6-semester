@@ -2,96 +2,91 @@
 #include "config.h"
 #include <EEPROM.h>
 
+// Размер выделяемой EEPROM (10 байт)
 #define EEPROM_SIZE 10
 
-String correctCode = "";
-bool unlocked = false;
+// Глобальные переменные состояния
+String correctCode = "";    // Хранит правильный код
+bool unlocked = false;      // Флаг состояния замка
 
-//запись кода в EEPROM
+// Функция записи строки в EEPROM
 void writeToEEPROM(int addrOffset, String& code) {
   int len = code.length();
-  EEPROM.write(addrOffset, len);
+  EEPROM.write(addrOffset, len);  // Записываем длину строки
   for (int i = 0; i < len; i++) {
-    EEPROM.write(addrOffset + 1 + i, code[i]);
+    EEPROM.write(addrOffset + 1 + i, code[i]);  // Посимвольно записываем код
   }
-  EEPROM.commit();
+  EEPROM.commit();  // Сохраняем изменения
 }
 
-//чтение кода из EEPROM
+// Функция чтения строки из EEPROM
 String readFromEEPROM(int addrOffset) {
-  int len = EEPROM.read(addrOffset);
-  char data[len + 1];
+  int len = EEPROM.read(addrOffset);  // Читаем длину строки
+  char data[len + 1];                 // Буфер для данных
   for (int i = 0; i < len; i++) {
-    data[i] = EEPROM.read(addrOffset + 1 + i);
+    data[i] = EEPROM.read(addrOffset + 1 + i);  // Читаем посимвольно
   }
-  data[len] = '\0';
+  data[len] = '\0';  // Добавляем терминатор строки
   return String(data);
 }
 
-//переход в сон
+// Функция перехода в режим глубокого сна
 void goToSleep() {
-  //команда Arduino об уходе в сон
-  Serial.println("Going to sleep...");
-  //отключаем светодиод
-  digitalWrite(LED_PIN, LOW);
-  //включаем таймер сна
+  Serial.println("Going to sleep...");  // Уведомление Arduino
+  digitalWrite(LED_PIN, LOW);          // Выключаем светодиод
+  
+  // Настраиваем пробуждение по таймеру
   esp_sleep_enable_timer_wakeup(MAX_SLEEP_TIME_SEC * 1000000ULL);
-  delay(100);
-  //уходим в сон
-  esp_deep_sleep_start();
+  delay(100);  // Короткая задержка для завершения операций
+  esp_deep_sleep_start();  // Переход в глубокий сон
 }
 
-//генерируем код (при запуске)
+// Генерация случайного кода
 String generateCode(int length = 4) {
   String code = "";
-  //случайно генерируем код почислово
   for (int i = 0; i < length; i++) {
-    code += String(esp_random() % 10); //случайное число от 0 до 9
+    code += String(esp_random() % 10);  // Цифра от 0 до 9
   }
   return code;
 }
 
 void setup() {
-  //пин светодиода на выход
+  // Настройка вывода для светодиода
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);
 
-  //запуск соединения с Arduino
+  // Инициализация последовательного порта и EEPROM
   Serial.begin(9600);
   EEPROM.begin(EEPROM_SIZE);
+  delay(1000);  // Стабилизация
 
-  delay(1000);
-
-  //генерируем код при первом включении
+  // Генерация/чтение кода в зависимости от причины пробуждения
   if(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
+    // Первый запуск - генерируем новый код
     correctCode = generateCode();
     writeToEEPROM(0, correctCode);
-  } else { //если после сна - читаем сгенерированный при первом запуске код
+  } else {
+    // Пробуждение после сна - читаем сохраненный код
     correctCode = readFromEEPROM(0);
   }
 
-  //уведомляем Arduino, что замок готов к работе
-  Serial.println("AWAKE");
+  // Отправка статуса Arduino
+  Serial.println("AWAKE");          // Уведомление о готовности
   delay(100);
-  //отправляем код на Arduino
-  Serial.println("CODE:" + correctCode);
+  Serial.println("CODE:" + correctCode); // Отправка кода
 }
 
 void loop() {
+  // Обработка входящих команд от Arduino
   if (Serial.available()) {
-    //читаем команду с Arduino
     String input = Serial.readStringUntil('\n');
     input.trim();
 
-    //если код ввели верно
-    if (input == "unlock") {
-      //включаем светодиод
-      digitalWrite(LED_PIN, HIGH);
-      //сообщаем Arduino о том, что замок открыт
-      Serial.println("UNLOCKED");
+    if (input == "unlock") {  // Команда разблокировки
+      digitalWrite(LED_PIN, HIGH);  // Включаем светодиод
+      Serial.println("UNLOCKED");   // Подтверждение
       unlocked = true;
-    } else if (input == "sleep") {
-      //уходим в сон, если команда "уйти в сон"
+    } else if (input == "sleep") {  // Команда сна
       goToSleep();
     }
   }

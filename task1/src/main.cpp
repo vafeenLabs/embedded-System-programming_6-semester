@@ -2,68 +2,65 @@
 #include "BluetoothSerial.h"
 #include "config.h"
 
-//инициализируем Bluetooth-передатчик
+// Инициализация Bluetooth-интерфейса
 BluetoothSerial SerialBT;
 
-// const int cycleLength = sizeof(cycleValues) / sizeof(cycleValues[0]); //длина цикла
+// Переменные состояния системы:
+unsigned long timerStartMillis = 0;  // Время старта таймера
+bool timerRunning = false;           // Флаг активен ли таймер
+int lastBroadcastValue = DEFAULT_VALUE; // Последнее отправленное значение
+bool lastButtonState = HIGH;         // Предыдущее состояние кнопки
+int value = 1;                       // Текущее значение для отправки (начинается с 1)
 
-unsigned long timerStartMillis = 0;
-bool timerRunning = false;
-int cycleIndex = -1; //для того, чтобы при первом нажатии передавался первый элемент цикла
-int lastBroadcastValue = DEFAULT_VALUE;
-bool lastButtonState = HIGH;
-int value = 1; 
-//функция передачи значения
+// Функция отправки значения по Bluetooth и в Serial
 void broadcastValue(int value) {
-  //если значение изменилось
-  if (value != lastBroadcastValue) {
-    lastBroadcastValue = value;
+  if (value != lastBroadcastValue) { // Проверка изменения значения
+    lastBroadcastValue = value;      // Обновление последнего значения
     String msg = String("Value: ") + String(value);
-    Serial.println(msg);
-    SerialBT.println(msg);
+    Serial.println(msg);             // Вывод в монитор порта
+    SerialBT.println(msg);           // Отправка по Bluetooth
   }
 }
 
-//конфигурирование системы
 void setup() {
-  //ставим кнопку на вход с подтяжкой
+  // Настройка кнопки с внутренней подтяжкой к питанию
   pinMode(BUTTON_PIN, INPUT_PULLUP);
-  //последовательный порт для отладки
+  
+  // Инициализация последовательного порта
   Serial.begin(115200);
-  //запускаем Bluetooth-передатчик
+  
+  // Запуск Bluetooth с именем устройства
   SerialBT.begin("ESP32_Broadcaster");
+  
+  // Стартовые сообщения
   Serial.println("ESP32 Bluetooth broadcaster started.");
   SerialBT.println("Value: " + String(DEFAULT_VALUE));
 }
 
 void loop() {
-  
-  //проверяем состояние кнопки
+  // Чтение текущего состояния кнопки
   bool buttonState = digitalRead(BUTTON_PIN);
-  //кнопка нажата
+  
+  // Обработка нажатия (переход из HIGH в LOW)
   if (buttonState == LOW && lastButtonState == HIGH) {
-    //инициализируем таймер
-    timerStartMillis = millis();
-    timerRunning = true;
-    //сдвигаем элемент по циклу
-    // cycleIndex = (cycleIndex + 1) % cycleLength;
-    //передаем значение цикла
-    // broadcastValue(cycleValues[cycleIndex]);
+    timerStartMillis = millis();     // Старт таймера
+    timerRunning = true;             // Активация флага таймера
+    
+    // Отправка текущего значения и инкремент
     broadcastValue(value);
-    value+=1;
+    value += 1;                      // Увеличение значения на 1
   }
-  lastButtonState = buttonState;
+  lastButtonState = buttonState;     // Сохранение состояния кнопки
 
-  //таймер не истек
+  // Проверка таймера
   if (timerRunning) {
-    //таймер истекает
+    // Если таймер истек (10 секунд)
     if (millis() - timerStartMillis > TIMER_DURATION) {
-      //остановка таймера
-      timerRunning = false;
-      //передаем дефолтное значение
-      value =1; 
-      broadcastValue(value);
+      timerRunning = false;          // Сброс флага таймера
+      value = 1;                     // Сброс значения на начальное
+      broadcastValue(DEFAULT_VALUE); // Отправка значения по умолчанию
     }
   }
-  delay(50); //антидребезг
+  
+  delay(50); // Задержка для подавления дребезга кнопки
 }

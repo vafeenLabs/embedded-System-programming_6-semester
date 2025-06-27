@@ -5,22 +5,24 @@
 #include <Adafruit_SSD1306.h>
 #include "config.h"
 
+// Инициализация OLED-дисплея
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+// Инициализация клавиатуры
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-//вспомогательные переменные
-String correctCode = "";
-String inputCode = "";
-int attemptCount = 0;
-bool codeReceived = false;
+// Переменные состояния системы
+String correctCode = "";      // Правильный код от замка
+String inputCode = "";        // Вводимый пользователем код
+int attemptCount = 0;         // Счетчик попыток ввода
+bool codeReceived = false;    // Флаг получения кода от замка
 
-//отображение сообщения на экране
+// Функция вывода сообщения на дисплей
 void showMessage(const String& msg, int y = 0, bool clear = true) {
   if (clear) {
-    display.clearDisplay();
-    display.setCursor(0, y);
-    display.print(msg);
-    display.display();
+    display.clearDisplay();   // Очистка дисплея при необходимости
+    display.setCursor(0, y);  // Установка курсора
+    display.print(msg);       // Вывод текста
+    display.display();        // Обновление дисплея
   } else {
     display.setCursor(0, y);
     display.print(msg);
@@ -28,102 +30,102 @@ void showMessage(const String& msg, int y = 0, bool clear = true) {
   }
 }
 
-//отправка команды на замок
+// Отправка команды на замок через Serial
 void sendCommand(String cmd) {
-  Serial.println(cmd);
+  Serial.println(cmd);  // Протоколирование команды
 }
 
-//подсказка - указание числа на верной позиции
+// Подсказка - показывает правильно введенные цифры
 void giveHint() {
-  display.setCursor(0, 40);
+  display.setCursor(0, 40);  // Позиция для подсказки
   for (int i = 0; i < inputCode.length(); i++) {
+    // Сравниваем каждый символ с правильным кодом
     if (i < correctCode.length() && inputCode[i] == correctCode[i]) {
-      display.print(inputCode[i]);
+      display.print(inputCode[i]);  // Показываем правильную цифру
     } else {
-      display.print('_');
+      display.print('_');  // Маскируем неправильные
     }
   }
   display.display();
 }
 
-//установка
 void setup() {
-  //инициализация приемопередатчика
-  Serial.begin(9600);
+  Serial.begin(9600);  // Инициализация последовательного порта
   
-  //инициализируем дисплей
+  // Инициализация дисплея
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C, false, false)) {
-    while (true);
+    while (true);  // Бесконечный цикл при ошибке инициализации
   }
+  
+  // Настройки отображения текста
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   
-  //выводим, что ожидаем связи с замком
-  showMessage("Waiting for lock...");
+  showMessage("Waiting for lock...");  // Стартовое сообщение
 }
 
 void loop() {
+  // Обработка входящих сообщений от замка
   if (Serial.available()) {
-    //обрабатываем сигнал
     String msg = Serial.readStringUntil('\n');
     msg.trim();
 
-    if (msg.startsWith("CODE:")) { //если пришел код
-      correctCode = msg.substring(5);
-      inputCode = "";
-      attemptCount = 0;
-      codeReceived = true;
-      showMessage("PIN:");
+    if (msg.startsWith("CODE:")) {  // Получен новый код
+      correctCode = msg.substring(5);  // Извлекаем код из сообщения
+      inputCode = "";                 // Сброс введенного кода
+      attemptCount = 0;               // Сброс счетчика попыток
+      codeReceived = true;            // Флаг получения кода
+      showMessage("PIN:");            // Приглашение для ввода
     }
-    else if (msg == "AWAKE") { //если замок передал свою готовность к работе
+    else if (msg == "AWAKE") {       // Замок готов к работе
       showMessage("Connected!");
       delay(1500);
       if (codeReceived) {
-        showMessage("PIN: ");
-      }
-      else {
-        showMessage("Waiting...");
+        showMessage("PIN: ");        // Продолжаем запрос кода
+      } else {
+        showMessage("Waiting...");   // Ожидаем код
       }
     }
   }
 
-  //читаем нажатую клавишу
+  // Обработка нажатий клавиш
   char key = keypad.getKey();
-  if (key && codeReceived) {  // Обрабатываем ввод только после получения кода
-    if (key == '#') { //подтвердили ввод - проверка кода
+  if (key && codeReceived) {  // Обработка только после получения кода
+    
+    if (key == '#') {  // Подтверждение ввода
       attemptCount++;
       
-      // Проверяем длину и содержимое кода
+      // Проверка кода
       if (inputCode.length() == correctCode.length() && inputCode == correctCode) {
-        showMessage("Unlocked!");
-        sendCommand("unlock");
+        showMessage("Unlocked!");    // Успешное открытие
+        sendCommand("unlock");       // Команда разблокировки
         delay(2000);
-        showMessage("PIN:");
+        showMessage("PIN:");         // Возврат к вводу
       } 
-      else if (attemptCount >= maxAttempts) { //превысили число попыток - блокировка
-        showMessage("Lock blocked!");
-        sendCommand("sleep");
-        codeReceived = false;
+      else if (attemptCount >= maxAttempts) {  // Превышены попытки
+        showMessage("Lock blocked!"); // Блокировка системы
+        sendCommand("sleep");        // Команда блокировки
+        codeReceived = false;        // Сброс флага
       } 
-      else { //неверный код и есть еще попытки
+      else {  // Неверный код, но есть попытки
         showMessage("Oops! Try " + String(attemptCount) + "/" + String(maxAttempts));
-        giveHint();
+        giveHint();                 // Показ подсказки
         delay(2000);
-        showMessage("PIN:");
+        showMessage("PIN:");        // Повторный запрос
       }
-      inputCode = "";
+      inputCode = "";               // Сброс ввода
     } 
-    else if (key == '*') { //очищаем введенный код
+    else if (key == '*') {  // Сброс ввода
       inputCode = "";
       showMessage("PIN:");
     } 
-    else if (isdigit(key)) { //добавляем цифры к вводимому коду
+    else if (isdigit(key)) {  // Ввод цифр
       if (inputCode.length() < correctCode.length()) {
-        inputCode += key;
+        inputCode += key;      // Добавление цифры
         display.clearDisplay();
         showMessage("PIN:", 0, false);
-        showMessage(inputCode, 20, false);
+        showMessage(inputCode, 20, false);  // Показ вводимого кода
       }
     }
   }
