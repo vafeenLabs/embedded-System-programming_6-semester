@@ -1,9 +1,6 @@
-# Программирование встроенных систем 6 семестр
+ТЗ
 
-## Exam 
-ТЗ:
-
-Задача 1: bluetooth метка
+Задача 1: blutuse метка
 Плата: ESP32
 
 Плата постоянно вещает по blutuse сигнал, при поступлении на цифровой порт сигнала, на заданный промежуток времени меняется вещаемый сгнал на другой при этом на каждый раз выдает разный сигнал из заданного набора. На пример постоянно вещается сигнал 100, при получении входного сигнала вещается 101, на следующий вход 102, 103, 104, после цикл начинается сначала.
@@ -19,37 +16,3 @@ Arduino (Дешефратор)
 Документация к ESP32: https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf
 Эмуляторы: https://wokwi.com/esp32
 Консольный вариант: https://rutube.ru/video/4d5a324aff105ea2949531bbf03a2e1a/
-
-### task1 
-
-Установка platformio для компиляции
-```
-pip install platformio
-```
-
-Загрузка прошивки на ESP
-```
-esptool.exe --chip esp32 --port COM5 write-flash 0x1000 firmware.bin
-```
-
-Компиляция проекта:
-```
-pio run
-```
-
-Монитор блютуза:
-```
-platformio device monitor —port COM7 —baud 115200
-```
-
-### task2
-
-Загрузка прошивки на ESP
-```
-esptool.exe --chip esp32 --port COM5 write-flash 0x1000 firmware.bin
-```
-
-Компиляция и загрузка прошивки на Arduino
-```
-pio run -t upload
-```
