@@ -21,7 +21,10 @@ Arduino (Дешефратор)
 Консольный вариант: https://rutube.ru/video/4d5a324aff105ea2949531bbf03a2e1a/
 
 ### task1 
-
+<video width="640" height="360" controls>
+  <source src="./exam/doc_2025-06-28_09-09-09.mp4" type="video/mp4">
+  Ваш браузер не поддерживает видео.
+</video>
 Установка platformio для компиляции
 ```
 pip install platformio
@@ -43,6 +46,11 @@ platformio device monitor —port COM7 —baud 115200
 ```
 
 ### task2
+<video width="640" height="360" controls>
+  <source src="./exam/video_2025-06-28_09-09-04.mp4" type="video/mp4">
+  Ваш браузер не поддерживает видео.
+</video>
+
 
 Загрузка прошивки на ESP
 ```
